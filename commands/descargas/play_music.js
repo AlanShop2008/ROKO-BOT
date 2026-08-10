@@ -14,7 +14,7 @@ function cleanFileName(name) {
 }
 
 /* =========================================
-   BUSCAR YOUTUBE
+   BUSCAR EN YOUTUBE
 ========================================= */
 
 async function searchYoutube(input) {
@@ -86,7 +86,7 @@ async function searchYoutube(input) {
     }
   }
 
-  /* BUSCAR POR NOMBRE */
+  /* BÚSQUEDA POR NOMBRE */
 
   const search =
     await yts(input)
@@ -124,7 +124,7 @@ async function searchYoutube(input) {
 }
 
 /* =========================================
-   API ORIGINAL
+   API DE DESCARGA
 ========================================= */
 
 async function downloadYoutube(url) {
@@ -136,6 +136,7 @@ async function downloadYoutube(url) {
     await fetch(apiUrl)
 
   if (!res.ok) {
+
     throw new Error(
       "LA API NO RESPONDIÓ CORRECTAMENTE."
     )
@@ -145,6 +146,7 @@ async function downloadYoutube(url) {
     await res.json()
 
   if (!json.status || !json.dl) {
+
     throw new Error(
       "NO SE PUDO OBTENER EL ARCHIVO."
     )
@@ -154,46 +156,7 @@ async function downloadYoutube(url) {
 }
 
 /* =========================================
-   CONTACTO ALAN STORE MX
-========================================= */
-
-function crearContacto(conn) {
-
-  const botNumber =
-    conn.user.jid.split("@")[0]
-
-  const vcard =
-`BEGIN:VCARD
-VERSION:3.0
-FN:𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄 𝐌𝐗
-ORG:Streaming Digital;
-TEL;type=CELL;type=VOICE;waid=${botNumber}:+${botNumber}
-END:VCARD`
-
-  return {
-    key: {
-      fromMe: false,
-      participant:
-        "0@s.whatsapp.net",
-      remoteJid:
-        "status@broadcast",
-      id:
-        "AlanStoreFake"
-    },
-
-    message: {
-      contactMessage: {
-        displayName:
-          "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
-
-        vcard
-      }
-    }
-  }
-}
-
-/* =========================================
-   PLAY AUTOMÁTICO
+   PLAY
 ========================================= */
 
 const handler = async (
@@ -206,7 +169,7 @@ const handler = async (
     const input =
       (text || "").trim()
 
-    /* SIN TEXTO */
+    /* SIN CANCIÓN */
 
     if (!input) {
 
@@ -216,14 +179,13 @@ const handler = async (
         `> ✦ INGRESA EL NOMBRE O LINK DE *YOUTUBE* ✦
 
 Ejemplo:
-
 .play pollito pío`,
 
         m
       )
     }
 
-    /* BUSCANDO */
+    /* BUSCAR */
 
     await m.react("🔎")
 
@@ -241,43 +203,9 @@ Ejemplo:
       )
     }
 
-    /* CARGANDO */
+    /* DESCARGAR */
 
     await m.react("⏳")
-
-    /* CREAR CONTACTO */
-
-    const fcontacto =
-      crearContacto(conn)
-
-    /* ENCABEZADO */
-
-    const caption =
-`╭─「 🎵 𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄 𝐏𝐋𝐀𝐘 」
-│
-│ 🎶 *${result.title}*
-│ 👤 *${result.author}*
-│ ⏱️ *${result.duration}*
-│
-╰───────────────
-
-🎧 *Descargando canción automáticamente...*`
-
-    /* ENVIAR ENCABEZADO */
-
-    await conn.sendMessage(
-      m.chat,
-      {
-        text: caption
-      },
-      {
-        quoted: fcontacto
-      }
-    )
-
-    /* =====================================
-       OBTENER MP3
-    ===================================== */
 
     const json =
       await downloadYoutube(
@@ -291,7 +219,7 @@ Ejemplo:
       )
 
     /* =====================================
-       ENVIAR AUDIO DIRECTAMENTE
+       ENVIAR SOLAMENTE LA CANCIÓN
     ===================================== */
 
     await conn.sendMessage(
@@ -311,12 +239,9 @@ Ejemplo:
           false
       },
       {
-        quoted:
-          fcontacto
+        quoted: m
       }
     )
-
-    /* TERMINADO */
 
     await m.react("✔️")
 
@@ -327,13 +252,8 @@ Ejemplo:
   } catch (e) {
 
     console.error(
-      "========== ERROR PLAY =========="
-    )
-
-    console.error(e)
-
-    console.error(
-      "================================"
+      "ERROR PLAY:",
+      e
     )
 
     await m.react("✖️")
