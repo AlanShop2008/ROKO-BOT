@@ -14,7 +14,7 @@ function cleanFileName(name) {
 }
 
 /* =========================================
-   BUSCAR EN YOUTUBE
+   BUSCAR YOUTUBE
 ========================================= */
 
 async function searchYoutube(input) {
@@ -22,17 +22,25 @@ async function searchYoutube(input) {
   const ytRegex =
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
 
-  const videoMatch = input.match(ytRegex)
-  const videoId = videoMatch ? videoMatch[1] : null
+  const videoMatch =
+    input.match(ytRegex)
+
+  const videoId =
+    videoMatch ? videoMatch[1] : null
+
+  /* LINK DIRECTO */
 
   if (videoId) {
+
     try {
 
-      const info = await yts({ videoId })
+      const info =
+        await yts({ videoId })
 
       return {
         title:
-          info.title || "Video de YouTube",
+          info.title ||
+          "Video de YouTube",
 
         url:
           info.url ||
@@ -46,7 +54,8 @@ async function searchYoutube(input) {
           `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 
         duration:
-          info.timestamp || "Desconocida",
+          info.timestamp ||
+          "Desconocida",
 
         author:
           info.author?.name ||
@@ -57,7 +66,8 @@ async function searchYoutube(input) {
     } catch {
 
       return {
-        title: "Video de YouTube",
+        title:
+          "Video de YouTube",
 
         url:
           `https://youtu.be/${videoId}`,
@@ -67,22 +77,35 @@ async function searchYoutube(input) {
         thumbnail:
           `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 
-        duration: "Desconocida",
+        duration:
+          "Desconocida",
 
-        author: "Desconocido"
+        author:
+          "Desconocido"
       }
     }
   }
 
-  const search = await yts(input)
-  const result = search.videos?.[0]
+  /* BUSCAR POR NOMBRE */
 
-  if (!result) return null
+  const search =
+    await yts(input)
+
+  const result =
+    search.videos?.[0]
+
+  if (!result)
+    return null
 
   return {
-    title: result.title,
-    url: result.url,
-    videoId: result.videoId,
+    title:
+      result.title,
+
+    url:
+      result.url,
+
+    videoId:
+      result.videoId,
 
     thumbnail:
       result.thumbnail ||
@@ -90,7 +113,8 @@ async function searchYoutube(input) {
       `https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg`,
 
     duration:
-      result.timestamp || "Desconocida",
+      result.timestamp ||
+      "Desconocida",
 
     author:
       result.author?.name ||
@@ -100,7 +124,7 @@ async function searchYoutube(input) {
 }
 
 /* =========================================
-   API DE DESCARGA
+   API ORIGINAL
 ========================================= */
 
 async function downloadYoutube(url) {
@@ -108,7 +132,8 @@ async function downloadYoutube(url) {
   const apiUrl =
     `https://getmod-mediahub.vercel.app/api/ytdl?url=${encodeURIComponent(url)}&format=mp3&apikey=${apiKey}`
 
-  const res = await fetch(apiUrl)
+  const res =
+    await fetch(apiUrl)
 
   if (!res.ok) {
     throw new Error(
@@ -116,7 +141,8 @@ async function downloadYoutube(url) {
     )
   }
 
-  const json = await res.json()
+  const json =
+    await res.json()
 
   if (!json.status || !json.dl) {
     throw new Error(
@@ -128,7 +154,7 @@ async function downloadYoutube(url) {
 }
 
 /* =========================================
-   CONTACTO ALAN STORE MX
+   CONTACTO ALAN STORE MX (VERIFICADO)
 ========================================= */
 
 function crearContacto(conn) {
@@ -147,14 +173,19 @@ END:VCARD`
   return {
     key: {
       fromMe: false,
-      participant: "0@s.whatsapp.net",
-      remoteJid: "status@broadcast",
-      id: "AlanStoreFake"
+      participant:
+        "0@s.whatsapp.net",
+      remoteJid:
+        "status@broadcast",
+      id:
+        "AlanStoreFake"
     },
 
     message: {
       contactMessage: {
-        displayName: "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
+        displayName:
+          "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
+
         vcard
       }
     }
@@ -162,7 +193,7 @@ END:VCARD`
 }
 
 /* =========================================
-   PLAY
+   PLAY AUTOMÁTICO (SOLO CANCIÓN)
 ========================================= */
 
 const handler = async (
@@ -175,6 +206,8 @@ const handler = async (
     const input =
       (text || "").trim()
 
+    /* SIN TEXTO */
+
     if (!input) {
 
       return conn.reply(
@@ -183,11 +216,14 @@ const handler = async (
         `> ✦ INGRESA EL NOMBRE O LINK DE *YOUTUBE* ✦
 
 Ejemplo:
+
 .play pollito pío`,
 
         m
       )
     }
+
+    /* BUSCANDO */
 
     await m.react("🔎")
 
@@ -205,19 +241,14 @@ Ejemplo:
       )
     }
 
-    await m.react("⏳")
-
-    /*
-     * CREAR CONTACTO
-     * Este será el encabezado del audio
-     */
+    /* CREAR CONTACTO DE VERIFICADO */
 
     const fcontacto =
       crearContacto(conn)
 
-    /*
-     * OBTENER AUDIO
-     */
+    /* =====================================
+       OBTENER MP3
+    ===================================== */
 
     const json =
       await downloadYoutube(
@@ -230,12 +261,9 @@ Ejemplo:
         result.title
       )
 
-    /*
-     * ENVIAR SOLAMENTE LA CANCIÓN
-     *
-     * Pero citando el contacto de
-     * ALAN STORE MX como encabezado.
-     */
+    /* =====================================
+       ENVIAR ÚNICAMENTE LA CANCIÓN
+    ===================================== */
 
     await conn.sendMessage(
       m.chat,
@@ -250,12 +278,16 @@ Ejemplo:
         mimetype:
           "audio/mpeg",
 
-        ptt: false
+        ptt:
+          false
       },
       {
-        quoted: fcontacto
+        quoted:
+          fcontacto
       }
     )
+
+    /* TERMINADO */
 
     await m.react("✔️")
 
@@ -266,8 +298,13 @@ Ejemplo:
   } catch (e) {
 
     console.error(
-      "ERROR PLAY:",
-      e
+      "========== ERROR PLAY =========="
+    )
+
+    console.error(e)
+
+    console.error(
+      "================================"
     )
 
     await m.react("✖️")
