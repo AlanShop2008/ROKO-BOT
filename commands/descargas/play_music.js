@@ -1,361 +1,231 @@
-Import fetch from "node-fetch"
-import yts from "yt-search"
+import fetch from "node-fetch"
+importar yts desde "yt-search"
+
+/*
+ * JUGAR - TIENDA ALAN MX
+ * Comando: .play <canción o link>
+ *
+ * Requisitos:
+ * npm i node-fetch yt-search
+ */
 
 const apiKey = "barboza"
+const API_BASE = "https://getmod-mediahub.vercel.app/api/ytdl"
 
-/* =========================================
-   LIMPIAR NOMBRE
-========================================= */
-
-function cleanFileName(name) {
-  return (name || "YouTube")
+función cleanFileName(name = "YouTube") {
+  devolver String(nombre)
     .replace(/[\\/:*?"<>|]/g, "")
-    .slice(0, 80)
+    .replace(/\s+/g, " ")
+    .recortar()
+    .slice(0, 80) || "YouTube"
 }
 
-/* =========================================
-   BUSCAR YOUTUBE
-========================================= */
+función isYoutubeUrl(texto = "") {
+  return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(text.trim())
+}
 
-async function searchYoutube(input) {
+función obtenerYoutubeId(texto = "") {
+  const coincidencia = texto.coincidencia(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
+  )
+  ¿Coincidencia de retorno?.[1] || nulo
+}
 
-  const ytRegex =
-    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
+función asíncrona searchYoutube(input) {
+  const videoId = getYoutubeId(entrada)
 
-  const videoMatch =
-    input.match(ytRegex)
+  // Enlace directo
+  si (videoId) {
+    intentar {
+      información constante = esperar yts({ videoId })
 
-  const videoId =
-    videoMatch ? videoMatch[1] : null
-
-  /* LINK DIRECTO */
-
-  if (videoId) {
-
-    try {
-
-      const info =
-        await yts({ videoId })
-
-      return {
-        title:
-          info.title ||
-          "Video de YouTube",
-
-        url:
-          info.url ||
-          `https://youtu.be/${videoId}`,
-
-        videoId,
-
-        thumbnail:
-          info.thumbnail ||
-          info.image ||
+      devolver {
+        título: info.title || "Video de YouTube",
+        URL: info.url || `https://youtu.be/${videoId}`,
+        ID de vídeo,
+        uña del pulgar:
+          Miniatura informativa ||
           `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-
-        duration:
-          info.timestamp ||
-          "Desconocida",
-
-        author:
-          info.author?.name ||
-          info.author ||
-          "Desconocido"
+        duración: info.timestamp || "Desconocida",
+        autor: info.autor?.nombre || "Desconocido"
       }
-
-    } catch {
-
-      return {
-        title:
-          "Video de YouTube",
-
-        url:
-          `https://youtu.be/${videoId}`,
-
-        videoId,
-
-        thumbnail:
-          `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-
-        duration:
-          "Desconocida",
-
-        author:
-          "Desconocido"
+    } atrapar {
+      devolver {
+        título: "Video de YouTube",
+        URL: `https://youtu.be/${videoId}`,
+        ID de vídeo,
+        miniatura: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        duración: "Desconocida",
+        autor: "Desconocido"
       }
     }
   }
 
-  /* BUSCAR POR NOMBRE */
+  // Búsqueda por texto
+  const search = await yts(input)
+  const resultado = búsqueda.videos?.[0]
 
-  const search =
-    await yts(input)
+  Si (!resultado) devuelve null
 
-  const result =
-    search.videos?.[0]
-
-  if (!result)
-    return null
-
-  return {
-    title:
-      result.title,
-
-    url:
-      result.url,
-
-    videoId:
-      result.videoId,
-
-    thumbnail:
-      result.thumbnail ||
-      result.image ||
+  devolver {
+    título: resultado.título,
+    URL: resultado.url,
+    videoId: resultado.videoId,
+    uña del pulgar:
+      resultado.miniatura ||
       `https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg`,
-
-    duration:
-      result.timestamp ||
-      "Desconocida",
-
-    author:
-      result.author?.name ||
-      result.author ||
-      "Desconocido"
+    duración: result.timestamp || "Desconocida",
+    autor: resultado.autor?.nombre || "Desconocido"
   }
 }
 
-/* =========================================
-   API ORIGINAL
-========================================= */
-
-async function downloadYoutube(url) {
-
+función asíncrona downloadYoutube(url) {
   const apiUrl =
-    `https://getmod-mediahub.vercel.app/api/ytdl?url=${encodeURIComponent(url)}&format=mp3&apikey=${apiKey}`
+    `${API_BASE}?url=${encodeURIComponent(url)}&format=mp3&apikey=${encodeURIComponent(apiKey)}`
 
-  const res =
-    await fetch(apiUrl)
+  console.log("[PLAY] API:", apiUrl)
 
-  if (!res.ok) {
-    throw new Error(
-      "LA API NO RESPONDIÓ CORRECTAMENTE."
-    )
-  }
-
-  const json =
-    await res.json()
-
-  if (!json.status || !json.dl) {
-    throw new Error(
-      "NO SE PUDO OBTENER EL ARCHIVO."
-    )
-  }
-
-  return json
-}
-
-/* =========================================
-   CONTACTO ALAN STORE MX
-========================================= */
-
-function crearContacto(conn) {
-
-  const botNumber =
-    conn.user.jid.split("@")[0]
-
-  const vcard =
-`BEGIN:VCARD
-VERSION:3.0
-FN:𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄 𝐌𝐗
-ORG:Streaming Digital;
-TEL;type=CELL;type=VOICE;waid=${botNumber}:+${botNumber}
-END:VCARD`
-
-  return {
-    key: {
-      fromMe: false,
-      participant:
-        "0@s.whatsapp.net",
-      remoteJid:
-        "status@broadcast",
-      id:
-        "AlanStoreFake"
-    },
-
-    message: {
-      contactMessage: {
-        displayName:
-          "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
-
-        vcard
-      }
+  const respuesta = esperar a obtener (apiUrl, {
+    método: "GET",
+    encabezados: {
+      Aceptar: "application/json",
+      "User-Agent": "Mozilla/5.0"
     }
+  })
+
+  const raw = await response.text()
+
+  si (!respuesta.ok) {
+    throw new Error(`API HTTP ${response.status}: ${raw.slice(0, 300)}`)
+  }
+
+  dejar json
+  intentar {
+    json = JSON.parse(raw)
+  } atrapar {
+    lanzar nuevo Error(
+      `La API no desarrolló JSON válido: ${raw.slice(0, 300)}`
+    )
+  }
+
+  console.log("[PLAY] RESPUESTA API:", json)
+
+  const audioUrl =
+    json.dl ||
+    json.download ||
+    json.url ||
+    json.result?.dl ||
+    json.result?.url
+
+  si (!audioUrl) {
+    lanzar nuevo Error(
+      json.message ||
+      json.msg ||
+      "La API no devolvió un enlace de audio."
+    )
+  }
+
+  devolver {
+    ...json,
+    descarga: audioUrl
   }
 }
 
-/* =========================================
-   PLAY AUTOMÁTICO
-========================================= */
+const handler = async (m, { conn, text }) => {
+  const input = String(text || "").trim()
 
-const handler = async (
-  m,
-  { conn, text }
-) => {
+  si (!entrada) {
+    devolver conn.reply(
+      m.chat,
+      `ðŸŽµ *PLAY - ALAN STORE MX*
 
-  try {
-
-    const input =
-      (text || "").trim()
-
-    /* SIN TEXTO */
-
-    if (!input) {
-
-      return conn.reply(
-        m.chat,
-
-        `> ✦ INGRESA EL NOMBRE O LINK DE *YOUTUBE* ✦
+Escribe el nombre de una canción o pega un enlace de YouTube.
 
 Ejemplo:
+.play despacito
 
-.play pollito pío`,
+O:
+.reproducir https://youtu.be/XXXXXXXXXXX`,
+      metro
+    )
+  }
 
-        m
-      )
+  intentar {
+    si (typeof m.react === "function") {
+      esperar m.react("ðŸ"Ž")
     }
 
-    /* BUSCANDO */
+    esperar respuesta de conexión(
+      m.chat,
+      `ðŸ”Ž Buscando en YouTube...`,
+      metro
+    )
 
-    await m.react("🔎")
+    const resultado = await searchYoutube(entrada)
 
-    const result =
-      await searchYoutube(input)
+    si (!resultado) {
+      si (typeof m.react === "function") {
+        await m.react("â Œ")
+      }
 
-    if (!result) {
-
-      await m.react("✖️")
-
-      return conn.reply(
+      devolver conn.reply(
         m.chat,
-        `> ✖ NO SE ENCONTRARON RESULTADOS.`,
-        m
+        "â Œ No encontré ningún video con esa búsqueda.",
+        metro
       )
     }
 
-    /* CARGANDO */
+    esperar respuesta de conexión(
+      m.chat,
+      `ðŸŽµ *${result.title}*\n\nðŸ'¤ ${result.author}\nâ ±ï¸ ${result.duration}\n\nâ ³ Convirtiendo a MP3...`,
+      metro
+    )
 
-    await m.react("⏳")
+    si (typeof m.react === "function") {
+      await m.react("â ³")
+    }
 
-    /* CREAR CONTACTO */
+    const json = await downloadYoutube(result.url)
+    const título = cleanFileName(json.título || resultado.título)
 
-    const fcontacto =
-      crearContacto(conn)
-
-    /* ENCABEZADO */
-
-    const caption =
-` `
-
-    /* ENVIAR ENCABEZADO */
-
-    await conn.sendMessage(
+    esperar conn.sendMessage(
       m.chat,
       {
-        text: caption
+        audio: { url: json.dl },
+        Nombre del archivo: `${título}.mp3`,
+        tipo MIME: "audio/mpeg",
+        ptt: falso
       },
-      {
-        quoted: fcontacto
-      }
+      { citado: m }
     )
 
-    /* =====================================
-       OBTENER MP3
-    ===================================== */
+    si (typeof m.react === "function") {
+      esperar m.react("âœ…")
+    }
 
-    const json =
-      await downloadYoutube(
-        result.url
-      )
+    console.log(`[PLAY] ENVIADO: ${title}`)
+  } catch (error) {
+    console.error("========== ERROR DE REPRODUCCIÓN ==========")
+    consola.error(error)
+    console.error("================================")
 
-    const title =
-      cleanFileName(
-        json.title ||
-        result.title
-      )
+    si (typeof m.react === "function") {
+      await m.react("â Œ")
+    }
 
-    /* =====================================
-       ENVIAR AUDIO DIRECTAMENTE
-    ===================================== */
-
-    await conn.sendMessage(
+    devolver conn.reply(
       m.chat,
-      {
-        audio: {
-          url: json.dl
-        },
+      `â Œ *No pude descargar el audio.*
 
-        fileName:
-          `${title}.mp3`,
-
-        mimetype:
-          "audio/mpeg",
-
-        ptt:
-          false
-      },
-      {
-        quoted:
-          fcontacto
-      }
-    )
-
-    /* TERMINADO */
-
-    await m.react("✔️")
-
-    console.log(
-      `✅ PLAY ENVIADO: ${title}`
-    )
-
-  } catch (e) {
-
-    console.error(
-      "========== ERROR PLAY =========="
-    )
-
-    console.error(e)
-
-    console.error(
-      "================================"
-    )
-
-    await m.react("✖️")
-
-    return conn.reply(
-      m.chat,
-
-      `> ⚠️ *ERROR AL DESCARGAR LA CANCIÓN*
-
-${e.message || e}`,
-
-      m
+${error?.message || String(error)}`,
+      metro
     )
   }
 }
 
-/* =========================================
-   CONFIGURACIÓN
-========================================= */
+handler.command = /^(play|song|musica|música)$/i
+handler.help = ["reproducir <canción o enlace>"]
+manejador.etiquetas = ["medios"]
+controlador.límite = falso
 
-handler.command = [
-  "play"
-]
-
-handler.help = [
-  "play <canción o link>"
-]
-
-handler.tags = [
-  "media"
-]
-
-export default handler
+exportar controlador predeterminado
