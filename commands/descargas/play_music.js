@@ -78,7 +78,7 @@ async function downloadYoutube(url) {
 
   if (!res.ok) {
     throw new Error(
-      "LA API NO RESPONDIÓ CORRECTAMENTE."
+      `LA API NO RESPONDIÓ. HTTP ${res.status}`
     )
   }
 
@@ -86,7 +86,7 @@ async function downloadYoutube(url) {
 
   if (!json.status || !json.dl) {
     throw new Error(
-      "NO SE PUDO OBTENER EL AUDIO."
+      "LA API NO DEVOLVIÓ EL AUDIO."
     )
   }
 
@@ -95,7 +95,6 @@ async function downloadYoutube(url) {
 
 /*
  * CONTACTO FAKE DE ALAN STORE MX
- * Se utiliza como encabezado/mensaje citado.
  */
 function crearContacto(conn) {
   const botNumber =
@@ -129,6 +128,37 @@ END:VCARD`
   }
 }
 
+/*
+ * DESCARGAR EL MP3 COMO BUFFER
+ */
+async function getAudioBuffer(url) {
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0"
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `NO SE PUDO DESCARGAR EL AUDIO. HTTP ${response.status}`
+    )
+  }
+
+  const buffer =
+    Buffer.from(
+      await response.arrayBuffer()
+    )
+
+  if (!buffer.length) {
+    throw new Error(
+      "EL AUDIO DESCARGADO ESTÁ VACÍO."
+    )
+  }
+
+  return buffer
+}
+
 const handler = async (
   m,
   { conn, text }
@@ -143,14 +173,16 @@ const handler = async (
         `> ✦ INGRESA EL NOMBRE O LINK DE *YOUTUBE* ✦
 
 Ejemplo:
-.play pollito pío`,
+.play tuma bellakath`,
         m
       )
     }
 
     await m.react("🔎")
 
-    // Buscar canción
+    /*
+     * BUSCAR EN YOUTUBE
+     */
     const result =
       await searchYoutube(input)
 
@@ -166,7 +198,9 @@ Ejemplo:
 
     await m.react("⏳")
 
-    // Descargar automáticamente en MP3
+    /*
+     * OBTENER LINK DEL MP3
+     */
     const json =
       await downloadYoutube(
         result.url
@@ -178,11 +212,15 @@ Ejemplo:
         result.title
       )
 
-    // Crear encabezado de contacto
+    /*
+     * CREAR CONTACTO
+     */
     const fcontacto =
       crearContacto(conn)
 
-    // Enviar información antes del audio
+    /*
+     * ENCABEZADO
+     */
     const infoText =
 `╭─「 🎵 𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄 𝐏𝐋𝐀𝐘 」
 │
@@ -191,7 +229,7 @@ Ejemplo:
 │ ⏱️ *${result.duration}*
 │
 ╰───────────────
-> 🎧 Reproduciendo automáticamente...`
+🎧 *Descargando canción...*`
 
     await conn.sendMessage(
       m.chat,
@@ -203,34 +241,53 @@ Ejemplo:
       }
     )
 
-    // Enviar canción directamente
+    /*
+     * DESCARGAR EL MP3 A BUFFER
+     *
+     * Esto evita el error:
+     * Failed to fetch stream
+     */
+    const audioBuffer =
+      await getAudioBuffer(
+        json.dl
+      )
+
+    /*
+     * ENVIAR AUDIO
+     */
     await conn.sendMessage(
       m.chat,
       {
-        audio: {
-          url: json.dl
-        },
+        audio:
+          audioBuffer,
+
         fileName:
           `${title}.mp3`,
+
         mimetype:
           "audio/mpeg",
+
         ptt: false
       },
       {
-        quoted: fcontacto
+        quoted:
+          fcontacto
       }
     )
 
     await m.react("✔️")
 
   } catch (e) {
-    console.error(e)
+    console.error(
+      "ERROR PLAY:",
+      e
+    )
 
     await m.react("✖️")
 
     return conn.reply(
       m.chat,
-      `> ⚠ ERROR AL DESCARGAR LA CANCIÓN:
+      `> ⚠️ *ERROR AL DESCARGAR LA CANCIÓN*
 
 ${e.message || e}`,
       m
