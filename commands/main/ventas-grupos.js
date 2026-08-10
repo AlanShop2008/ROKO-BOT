@@ -669,16 +669,6 @@ ${saludo}
        *MENU DE VENTAS*
 ╰───────••───────╯
 
-👥 *Grupo:* ${groupName}
-👤 *Usuario:* ${await conn.getName(userId)}
-👑 *Premium:* ${user.premium ? 'Sí' : 'No'}
-👥 *Usuarios:* ${totalUsers}
-💎 *Premiums:* ${totalPremium}
-⚡ *Modo:* ${modo}
-⏱️ *Runtime:* ${uptime}
-
-━━━━━━━━━━━━━━━━━━━━
-
 📌 *Cómo crear tus propios comandos*
 
 Con *${usedPrefix}set*
@@ -698,27 +688,6 @@ Ejemplo:
 4️⃣ Cada grupo tiene su propia carpeta
 y su propia lista de comandos.
 
-✨ *Ejemplo práctico:*
-
-• Creas:
-*${usedPrefix}setpromo 2x1 hasta el viernes*
-
-• Usas:
-*${usedPrefix}promo*
-
-👉 El bot mostrará automáticamente tu promoción.
-
-━━━━━━━━━━━━━━━━━━━━
-
-${comandosCreados}
-
-━━━━━━━━━━━━━━━━━━━━
-
-╭───────────────⊰ 🔥
-│ ⚡ *${botname}*
-│ 👑 Alan Shop Dev
-│ 🛡️ 56 3736 2813
-╰───────────────⊰ 🔥
 `.trim()
 
   await m.react('🔥')
