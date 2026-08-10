@@ -1,6 +1,5 @@
 import fs from 'fs'
 import path from 'path'
-import fetch from 'node-fetch'
 
 const botname = global.botname || 'Alan Dev'
 
@@ -60,10 +59,18 @@ function getBody(m) {
 function clearMessageText(m) {
   try {
     m.text = ''
-    if (m.message?.conversation) m.message.conversation = ''
-    if (m.message?.extendedTextMessage?.text) m.message.extendedTextMessage.text = ''
-    if (m.message?.imageMessage?.caption) m.message.imageMessage.caption = ''
-    if (m.message?.videoMessage?.caption) m.message.videoMessage.caption = ''
+
+    if (m.message?.conversation)
+      m.message.conversation = ''
+
+    if (m.message?.extendedTextMessage?.text)
+      m.message.extendedTextMessage.text = ''
+
+    if (m.message?.imageMessage?.caption)
+      m.message.imageMessage.caption = ''
+
+    if (m.message?.videoMessage?.caption)
+      m.message.videoMessage.caption = ''
   } catch {}
 }
 
@@ -74,6 +81,7 @@ function getExtension(mimetype = '') {
   if (mimetype.includes('pdf')) return 'pdf'
   if (mimetype.includes('word')) return 'docx'
   if (mimetype.includes('excel') || mimetype.includes('spreadsheet')) return 'xlsx'
+
   return 'bin'
 }
 
@@ -82,6 +90,7 @@ function getMediaType(mimetype = '') {
   if (mimetype.includes('video')) return 'video'
   if (mimetype.includes('audio')) return 'audio'
   if (mimetype.includes('application')) return 'document'
+
   return 'text'
 }
 
@@ -104,9 +113,13 @@ function isLocked(chat, sender, command) {
 }
 
 function markHandled(m, commandName) {
-  const msgId = m.key?.id || `${m.chat}:${m.sender}:${commandName}`
+  const msgId =
+    m.key?.id ||
+    `${m.chat}:${m.sender}:${commandName}`
 
-  if (global.__ventasCustomHandled.has(msgId)) return true
+  if (global.__ventasCustomHandled.has(msgId)) {
+    return true
+  }
 
   global.__ventasCustomHandled.add(msgId)
 
@@ -124,9 +137,23 @@ async function getGroupFolder(conn, chat) {
   if (index[chat]?.folder) {
     let folder = path.join(ROOT, index[chat].folder)
 
-    if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
-    if (!fs.existsSync(path.join(folder, 'media'))) fs.mkdirSync(path.join(folder, 'media'), { recursive: true })
-    if (!fs.existsSync(path.join(folder, 'comandos.json'))) saveJson(path.join(folder, 'comandos.json'), {})
+    if (!fs.existsSync(folder)) {
+      fs.mkdirSync(folder, { recursive: true })
+    }
+
+    if (!fs.existsSync(path.join(folder, 'media'))) {
+      fs.mkdirSync(
+        path.join(folder, 'media'),
+        { recursive: true }
+      )
+    }
+
+    if (!fs.existsSync(path.join(folder, 'comandos.json'))) {
+      saveJson(
+        path.join(folder, 'comandos.json'),
+        {}
+      )
+    }
 
     return folder
   }
@@ -139,22 +166,33 @@ async function getGroupFolder(conn, chat) {
     groupName = 'Grupo'
   }
 
-  let folderName = `${cleanName(groupName)}_${jidKey.slice(-8)}`
+  let folderName =
+    `${cleanName(groupName)}_${jidKey.slice(-8)}`
+
   let folder = path.join(ROOT, folderName)
 
   fs.mkdirSync(folder, { recursive: true })
-  fs.mkdirSync(path.join(folder, 'media'), { recursive: true })
+  fs.mkdirSync(
+    path.join(folder, 'media'),
+    { recursive: true }
+  )
 
   if (!fs.existsSync(path.join(folder, 'comandos.json'))) {
-    saveJson(path.join(folder, 'comandos.json'), {})
+    saveJson(
+      path.join(folder, 'comandos.json'),
+      {}
+    )
   }
 
-  saveJson(path.join(folder, 'grupo.json'), {
-    jid: chat,
-    nombre: groupName,
-    carpeta: folderName,
-    creado: Date.now()
-  })
+  saveJson(
+    path.join(folder, 'grupo.json'),
+    {
+      jid: chat,
+      nombre: groupName,
+      carpeta: folderName,
+      creado: Date.now()
+    }
+  )
 
   index[chat] = {
     jid: chat,
@@ -169,24 +207,48 @@ async function getGroupFolder(conn, chat) {
 
 async function getCommandsFile(conn, chat) {
   let folder = await getGroupFolder(conn, chat)
-  return path.join(folder, 'comandos.json')
+
+  return path.join(
+    folder,
+    'comandos.json'
+  )
 }
 
-async function saveCustomCommand(m, conn, command, text, usedPrefix) {
+async function saveCustomCommand(
+  m,
+  conn,
+  command,
+  text,
+  usedPrefix
+) {
   if (!m.isGroup) {
-    return conn.reply(m.chat, `> ⚠ Este comando solo funciona en grupos.`, m)
+    return conn.reply(
+      m.chat,
+      `> ⚠ Este comando solo funciona en grupos.`,
+      m
+    )
   }
 
   let cmd = String(command || '').toLowerCase()
+
   let name = ''
   let content = ''
 
   if (cmd.startsWith('set') && cmd.length > 3) {
-    name = cleanCommandName(cmd.slice(3))
+    name = cleanCommandName(
+      cmd.slice(3)
+    )
+
     content = (text || '').trim()
   } else {
-    let args = (text || '').trim().split(/\s+/)
-    name = cleanCommandName(args.shift() || '')
+    let args = (text || '')
+      .trim()
+      .split(/\s+/)
+
+    name = cleanCommandName(
+      args.shift() || ''
+    )
+
     content = args.join(' ').trim()
   }
 
@@ -221,7 +283,11 @@ También puedes responder a una imagen con:
   ]
 
   if (blocked.includes(name)) {
-    return conn.reply(m.chat, `> ⚠ Ese nombre no se puede usar para un comando.`, m)
+    return conn.reply(
+      m.chat,
+      `> ⚠ Ese nombre no se puede usar para un comando.`,
+      m
+    )
   }
 
   let quoted = m.quoted || null
@@ -230,25 +296,56 @@ También puedes responder a una imagen con:
   let type = 'text'
 
   if (quoted) {
-    mimetype = quoted.mimetype || quoted.msg?.mimetype || ''
+    mimetype =
+      quoted.mimetype ||
+      quoted.msg?.mimetype ||
+      ''
+
     type = getMediaType(mimetype)
 
-    if (type !== 'text' && typeof quoted.download === 'function') {
+    if (
+      type !== 'text' &&
+      typeof quoted.download === 'function'
+    ) {
       let buffer = await quoted.download()
 
       if (buffer) {
-        let folder = await getGroupFolder(conn, m.chat)
-        let mediaDir = path.join(folder, 'media')
-        let ext = getExtension(mimetype)
-        let fileName = `${name}_${Date.now()}.${ext}`
+        let folder =
+          await getGroupFolder(
+            conn,
+            m.chat
+          )
 
-        mediaPath = path.join(mediaDir, fileName)
-        fs.writeFileSync(mediaPath, buffer)
+        let mediaDir =
+          path.join(
+            folder,
+            'media'
+          )
+
+        let ext =
+          getExtension(mimetype)
+
+        let fileName =
+          `${name}_${Date.now()}.${ext}`
+
+        mediaPath =
+          path.join(
+            mediaDir,
+            fileName
+          )
+
+        fs.writeFileSync(
+          mediaPath,
+          buffer
+        )
       }
     }
 
     if (!content) {
-      content = quoted.text || quoted.caption || ''
+      content =
+        quoted.text ||
+        quoted.caption ||
+        ''
     }
   }
 
@@ -260,13 +357,34 @@ También puedes responder a una imagen con:
     )
   }
 
-  let folder = await getGroupFolder(conn, m.chat)
-  let commandsFile = path.join(folder, 'comandos.json')
-  let comandos = readJson(commandsFile, {})
+  let folder =
+    await getGroupFolder(
+      conn,
+      m.chat
+    )
 
-  if (comandos[name]?.mediaPath && fs.existsSync(comandos[name].mediaPath)) {
+  let commandsFile =
+    path.join(
+      folder,
+      'comandos.json'
+    )
+
+  let comandos =
+    readJson(
+      commandsFile,
+      {}
+    )
+
+  if (
+    comandos[name]?.mediaPath &&
+    fs.existsSync(
+      comandos[name].mediaPath
+    )
+  ) {
     try {
-      fs.unlinkSync(comandos[name].mediaPath)
+      fs.unlinkSync(
+        comandos[name].mediaPath
+      )
     } catch {}
   }
 
@@ -280,9 +398,15 @@ También puedes responder a una imagen con:
     createdAt: Date.now()
   }
 
-  saveJson(commandsFile, comandos)
+  saveJson(
+    commandsFile,
+    comandos
+  )
 
-  let groupName = await conn.getName(m.chat).catch(() => 'este grupo')
+  let groupName =
+    await conn.getName(
+      m.chat
+    ).catch(() => 'este grupo')
 
   return conn.reply(
     m.chat,
@@ -299,104 +423,241 @@ Para verlo en la lista usa:
   )
 }
 
-async function sendCustomCommand(m, conn, cmd) {
-  if (cmd.type === 'image' && cmd.mediaPath && fs.existsSync(cmd.mediaPath)) {
+async function sendCustomCommand(
+  m,
+  conn,
+  cmd
+) {
+  if (
+    cmd.type === 'image' &&
+    cmd.mediaPath &&
+    fs.existsSync(cmd.mediaPath)
+  ) {
     await conn.sendMessage(
       m.chat,
       {
-        image: fs.readFileSync(cmd.mediaPath),
-        caption: cmd.content || ''
+        image:
+          fs.readFileSync(
+            cmd.mediaPath
+          ),
+        caption:
+          cmd.content || ''
       },
-      { quoted: m }
+      {
+        quoted: m
+      }
     )
+
     return
   }
 
-  if (cmd.type === 'video' && cmd.mediaPath && fs.existsSync(cmd.mediaPath)) {
+  if (
+    cmd.type === 'video' &&
+    cmd.mediaPath &&
+    fs.existsSync(cmd.mediaPath)
+  ) {
     await conn.sendMessage(
       m.chat,
       {
-        video: fs.readFileSync(cmd.mediaPath),
-        caption: cmd.content || ''
+        video:
+          fs.readFileSync(
+            cmd.mediaPath
+          ),
+        caption:
+          cmd.content || ''
       },
-      { quoted: m }
+      {
+        quoted: m
+      }
     )
+
     return
   }
 
-  if (cmd.type === 'audio' && cmd.mediaPath && fs.existsSync(cmd.mediaPath)) {
+  if (
+    cmd.type === 'audio' &&
+    cmd.mediaPath &&
+    fs.existsSync(cmd.mediaPath)
+  ) {
     await conn.sendMessage(
       m.chat,
       {
-        audio: fs.readFileSync(cmd.mediaPath),
-        mimetype: cmd.mimetype || 'audio/mpeg'
+        audio:
+          fs.readFileSync(
+            cmd.mediaPath
+          ),
+        mimetype:
+          cmd.mimetype ||
+          'audio/mpeg'
       },
-      { quoted: m }
+      {
+        quoted: m
+      }
     )
+
     return
   }
 
-  if (cmd.type === 'document' && cmd.mediaPath && fs.existsSync(cmd.mediaPath)) {
-    let ext = getExtension(cmd.mimetype || '')
-    let fileName = `${cmd.name}.${ext || 'pdf'}`
+  if (
+    cmd.type === 'document' &&
+    cmd.mediaPath &&
+    fs.existsSync(cmd.mediaPath)
+  ) {
+    let ext =
+      getExtension(
+        cmd.mimetype || ''
+      )
+
+    let fileName =
+      `${cmd.name}.${ext || 'pdf'}`
 
     await conn.sendMessage(
       m.chat,
       {
-        document: fs.readFileSync(cmd.mediaPath),
-        mimetype: cmd.mimetype || 'application/pdf',
+        document:
+          fs.readFileSync(
+            cmd.mediaPath
+          ),
+        mimetype:
+          cmd.mimetype ||
+          'application/pdf',
         fileName,
-        caption: cmd.content || ''
+        caption:
+          cmd.content || ''
       },
-      { quoted: m }
+      {
+        quoted: m
+      }
     )
+
     return
   }
 
-  await conn.reply(m.chat, cmd.content || '> ⚠ Comando sin contenido.', m)
+  await conn.reply(
+    m.chat,
+    cmd.content ||
+      '> ⚠ Comando sin contenido.',
+    m
+  )
 }
 
-async function sendMenuVentas(m, conn, usedPrefix) {
+async function sendMenuVentas(
+  m,
+  conn,
+  usedPrefix
+) {
   if (!m.isGroup) {
-    return conn.reply(m.chat, `> ⚠ Este menú funciona en grupos.`, m)
+    return conn.reply(
+      m.chat,
+      `> ⚠ Este menú funciona en grupos.`,
+      m
+    )
   }
 
-  if (!global.db.data.users) global.db.data.users = {}
-  if (!global.db.data.chats) global.db.data.chats = {}
-  if (!global.db.data.chats[m.chat]) global.db.data.chats[m.chat] = {}
+  if (!global.db.data.users) {
+    global.db.data.users = {}
+  }
 
-  let userId = m.mentionedJid?.[0] || m.sender
-  let user = global.db.data.users[userId] || { exp: 0, premium: false }
+  if (!global.db.data.chats) {
+    global.db.data.chats = {}
+  }
 
-  let totalUsers = Object.values(global.db.data.users).filter(u => u.exp > 0).length
-  let totalPremium = Object.values(global.db.data.users).filter(u => u.premium).length
+  if (!global.db.data.chats[m.chat]) {
+    global.db.data.chats[m.chat] = {}
+  }
 
-  let uptime = clockString(process.uptime() * 1000)
-  let modo = global.opts?.self ? 'PRIVADO' : 'PÚBLICO'
-  let saludo = getSaludo()
+  let userId =
+    m.mentionedJid?.[0] ||
+    m.sender
 
-  let groupName = await conn.getName(m.chat).catch(() => 'Grupo')
-  let commandsFile = await getCommandsFile(conn, m.chat)
-  let comandos = readJson(commandsFile, {})
+  let user =
+    global.db.data.users[userId] ||
+    {
+      exp: 0,
+      premium: false
+    }
 
-  let lista = Object.values(comandos).sort((a, b) => a.createdAt - b.createdAt)
+  let totalUsers =
+    Object.values(
+      global.db.data.users
+    ).filter(
+      u => u.exp > 0
+    ).length
+
+  let totalPremium =
+    Object.values(
+      global.db.data.users
+    ).filter(
+      u => u.premium
+    ).length
+
+  let uptime =
+    clockString(
+      process.uptime() * 1000
+    )
+
+  let modo =
+    global.opts?.self
+      ? 'PRIVADO'
+      : 'PÚBLICO'
+
+  let saludo =
+    getSaludo()
+
+  let groupName =
+    await conn.getName(
+      m.chat
+    ).catch(
+      () => 'Grupo'
+    )
+
+  let commandsFile =
+    await getCommandsFile(
+      conn,
+      m.chat
+    )
+
+  let comandos =
+    readJson(
+      commandsFile,
+      {}
+    )
+
+  let lista =
+    Object.values(
+      comandos
+    ).sort(
+      (a, b) =>
+        a.createdAt -
+        b.createdAt
+    )
 
   let comandosCreados = ''
 
   if (lista.length > 0) {
-    comandosCreados += `📂 *COMANDOS CREADOS EN ESTE GRUPO*\n\n`
+    comandosCreados +=
+      `📂 *COMANDOS CREADOS EN ESTE GRUPO*\n\n`
 
-    lista.forEach((cmd, index) => {
-      let emoji = cmd.type === 'image' ? '🖼️'
-        : cmd.type === 'video' ? '🎬'
-        : cmd.type === 'audio' ? '🎧'
-        : cmd.type === 'document' ? '📄'
-        : '🛒'
+    lista.forEach(
+      (cmd, index) => {
+        let emoji =
+          cmd.type === 'image'
+            ? '🖼️'
+            : cmd.type === 'video'
+            ? '🎬'
+            : cmd.type === 'audio'
+            ? '🎧'
+            : cmd.type === 'document'
+            ? '📄'
+            : '🛒'
 
-      comandosCreados += `${index + 1}. ${emoji} *${usedPrefix}${cmd.name}*\n`
-    })
+        comandosCreados +=
+          `${index + 1}. ${emoji} *${usedPrefix}${cmd.name}*\n`
+      }
+    )
   } else {
-    comandosCreados = `📂 Este grupo aún no ha creado comandos con *${usedPrefix}set*`
+    comandosCreados =
+      `📂 Este grupo aún no ha creado comandos con *${usedPrefix}set*`
   }
 
   let menuText = `
@@ -462,138 +723,333 @@ ${comandosCreados}
 
   await m.react('🔥')
 
-  let thumb = null
+  /*
+   * CONTACTO FAKE DE ALAN STORE MX
+   * Se utiliza como mensaje citado.
+   */
 
-  try {
-    let ppUrl = await conn.profilePictureUrl(m.chat, 'image')
-    let res = await fetch(ppUrl)
-    thumb = Buffer.from(await res.arrayBuffer())
-  } catch {
-    thumb = null
-  }
+  const botNumber =
+    conn.user.jid.split('@')[0]
 
-  const fgrupo = {
+  const vcard =
+`BEGIN:VCARD
+VERSION:3.0
+FN:𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄 𝐌𝐗
+ORG:Streaming Digital;
+TEL;type=CELL;type=VOICE;waid=${botNumber}:+${botNumber}
+END:VCARD`
+
+  const fcontacto = {
     key: {
       fromMe: false,
-      participant: '0@s.whatsapp.net',
-      remoteJid: 'status@broadcast',
-      id: 'AlanDevVentas'
+      participant:
+        '0@s.whatsapp.net',
+      remoteJid:
+        'status@broadcast',
+      id:
+        'AlanStoreFake'
     },
+
     message: {
-      locationMessage: {
-        name: groupName,
-        jpegThumbnail: thumb
+      contactMessage: {
+        displayName:
+          '𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄',
+
+        vcard:
+          vcard
       }
     }
   }
 
-  if (fs.existsSync(MENU_IMAGE)) {
+  if (
+    fs.existsSync(
+      MENU_IMAGE
+    )
+  ) {
     return conn.sendFile(
       m.chat,
       MENU_IMAGE,
       'catalogo.png',
       menuText,
-      fgrupo
+      fcontacto
     )
   }
 
-  return conn.reply(m.chat, menuText, fgrupo || m)
+  return conn.reply(
+    m.chat,
+    menuText,
+    fcontacto || m
+  )
 }
 
-let handler = async (m, { conn, text, command, usedPrefix }) => {
-  try {
-    usedPrefix = usedPrefix || '.'
-    command = String(command || '').toLowerCase()
-
-    if (command.startsWith('set')) {
-      return await saveCustomCommand(m, conn, command, text, usedPrefix)
-    }
-
-    if (['menuventas', 'menuv', 'menúv'].includes(command)) {
-      return await sendMenuVentas(m, conn, usedPrefix)
-    }
-
-  } catch (e) {
-    console.error(e)
-    return conn.reply(m.chat, `✖️ Error:\n\n${e.message || e}`, m)
+let handler = async (
+  m,
+  {
+    conn,
+    text,
+    command,
+    usedPrefix
   }
-}
-
-handler.before = async (m, { conn, usedPrefix }) => {
+) => {
   try {
-    if (m.__ventasCustomHandled) return true
-    if (!m.isGroup) return false
+    usedPrefix =
+      usedPrefix || '.'
 
-    let body = getBody(m)
-    usedPrefix = usedPrefix || '.'
-
-    if (!body.startsWith(usedPrefix)) return false
-
-    let commandName = body
-      .slice(usedPrefix.length)
-      .trim()
-      .split(/\s+/)[0]
-      .toLowerCase()
-
-    if (!commandName) return false
+    command =
+      String(
+        command || ''
+      ).toLowerCase()
 
     if (
-      commandName.startsWith('set') ||
-      ['menuventas', 'menuv', 'menúv'].includes(commandName)
-    ) return false
-
-    if (isLocked(m.chat, m.sender, commandName)) {
-      return true
+      command.startsWith('set')
+    ) {
+      return await saveCustomCommand(
+        m,
+        conn,
+        command,
+        text,
+        usedPrefix
+      )
     }
 
-    let commandsFile = await getCommandsFile(conn, m.chat)
-    let comandos = readJson(commandsFile, {})
-    let cmd = comandos[commandName]
-
-    if (!cmd) return false
-
-    if (markHandled(m, commandName)) return true
-
-    m.__ventasCustomHandled = true
-
-    await sendCustomCommand(m, conn, cmd)
-
-    clearMessageText(m)
-
-    return true
+    if (
+      [
+        'menuventas',
+        'menuv',
+        'menúv'
+      ].includes(command)
+    ) {
+      return await sendMenuVentas(
+        m,
+        conn,
+        usedPrefix
+      )
+    }
 
   } catch (e) {
     console.error(e)
-    return false
+
+    return conn.reply(
+      m.chat,
+      `✖️ Error:\n\n${e.message || e}`,
+      m
+    )
   }
 }
 
-handler.help = ['menuventas', 'setnombre <texto>']
-handler.tags = ['ventas']
-handler.command = /^(set(?!banner|bannergif|bannervideo|anner).*|menuventas|menuv|menúv)$/i
+handler.before =
+  async (
+    m,
+    {
+      conn,
+      usedPrefix
+    }
+  ) => {
+    try {
+      if (
+        m.__ventasCustomHandled
+      ) {
+        return true
+      }
+
+      if (!m.isGroup) {
+        return false
+      }
+
+      let body =
+        getBody(m)
+
+      usedPrefix =
+        usedPrefix || '.'
+
+      if (
+        !body.startsWith(
+          usedPrefix
+        )
+      ) {
+        return false
+      }
+
+      let commandName =
+        body
+          .slice(
+            usedPrefix.length
+          )
+          .trim()
+          .split(/\s+/)[0]
+          .toLowerCase()
+
+      if (!commandName) {
+        return false
+      }
+
+      if (
+        commandName.startsWith(
+          'set'
+        ) ||
+        [
+          'menuventas',
+          'menuv',
+          'menúv'
+        ].includes(
+          commandName
+        )
+      ) {
+        return false
+      }
+
+      if (
+        isLocked(
+          m.chat,
+          m.sender,
+          commandName
+        )
+      ) {
+        return true
+      }
+
+      let commandsFile =
+        await getCommandsFile(
+          conn,
+          m.chat
+        )
+
+      let comandos =
+        readJson(
+          commandsFile,
+          {}
+        )
+
+      let cmd =
+        comandos[
+          commandName
+        ]
+
+      if (!cmd) {
+        return false
+      }
+
+      if (
+        markHandled(
+          m,
+          commandName
+        )
+      ) {
+        return true
+      }
+
+      m.__ventasCustomHandled =
+        true
+
+      await sendCustomCommand(
+        m,
+        conn,
+        cmd
+      )
+
+      clearMessageText(m)
+
+      return true
+
+    } catch (e) {
+      console.error(e)
+      return false
+    }
+  }
+
+handler.help = [
+  'menuventas',
+  'setnombre <texto>'
+]
+
+handler.tags = [
+  'ventas'
+]
+
+handler.command =
+  /^(set(?!banner|bannergif|bannervideo|anner).*|menuventas|menuv|menúv)$/i
 
 export default handler
 
 function clockString(ms) {
-  let h = Math.floor(ms / 3600000)
-  let m = Math.floor(ms / 60000) % 60
-  let s = Math.floor(ms / 1000) % 60
-  return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':')
+  let h =
+    Math.floor(
+      ms / 3600000
+    )
+
+  let m =
+    Math.floor(
+      ms / 60000
+    ) % 60
+
+  let s =
+    Math.floor(
+      ms / 1000
+    ) % 60
+
+  return [
+    h,
+    m,
+    s
+  ]
+    .map(
+      v =>
+        v
+          .toString()
+          .padStart(
+            2,
+            '0'
+          )
+    )
+    .join(':')
 }
 
 function getSaludo() {
   let options = {
-    timeZone: 'America/Mexico_City',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    hour12: false
+    timeZone:
+      'America/Mexico_City',
+
+    hour:
+      'numeric',
+
+    minute:
+      'numeric',
+
+    second:
+      'numeric',
+
+    hour12:
+      false
   }
 
-  let horaStr = new Date().toLocaleString('es-MX', options)
-  let [hora] = horaStr.split(':').map(n => parseInt(n))
+  let horaStr =
+    new Date()
+      .toLocaleString(
+        'es-MX',
+        options
+      )
 
-  if (hora >= 5 && hora < 12) return `🌅 Buenos días | 🕒 ${horaStr}`
-  if (hora >= 12 && hora < 18) return `☀️ Buenas tardes | 🕒 ${horaStr}`
+  let [hora] =
+    horaStr
+      .split(':')
+      .map(
+        n =>
+          parseInt(n)
+      )
+
+  if (
+    hora >= 5 &&
+    hora < 12
+  ) {
+    return `🌅 Buenos días | 🕒 ${horaStr}`
+  }
+
+  if (
+    hora >= 12 &&
+    hora < 18
+  ) {
+    return `☀️ Buenas tardes | 🕒 ${horaStr}`
+  }
+
   return `🌙 Buenas noches | 🕒 ${horaStr}`
 }
