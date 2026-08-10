@@ -67,27 +67,34 @@ async function searchYoutube(input) {
 }
 
 /* =========================================
-   API DE DESCARGA (CORREGIDA Y ESTABLE)
+   API DE DESCARGA (COBALT / RYZENDESU)
 ========================================= */
 
 async function downloadYoutube(url) {
-  const apiUrl = `https://api.vreden.web.id/api/ytmp3?url=${encodeURIComponent(url)}`
-
-  const res = await fetch(apiUrl)
-  if (!res.ok) {
-    throw new Error("LA API NO RESPONDIÓ CORRECTAMENTE.")
+  // Intentar con API 1 (Ryzendesu)
+  try {
+    const res = await fetch(`https://api.ryzendesu.vip/api/downloader/ytmp3?url=${encodeURIComponent(url)}`)
+    if (res.ok) {
+      const json = await res.json()
+      const downloadUrl = json.url || json.dl || json.result?.downloadUrl
+      if (downloadUrl) return { dl: downloadUrl, title: json.title || json.result?.title }
+    }
+  } catch (e) {
+    console.error("Falló servidor 1, intentando servidor secundario...")
   }
 
-  const json = await res.json()
-  const downloadUrl = json.result?.download?.url || json.result?.dl
+  // Intentar con API 2 (Fallback: Delirius)
+  const fallbackRes = await fetch(`https://deliriussapi-official.vercel.app/download/ytmp3?url=${encodeURIComponent(url)}`)
+  if (!fallbackRes.ok) throw new Error("NINGÚN SERVIDOR DE DESCARGA RESPONDIÓ.")
 
-  if (!downloadUrl) {
-    throw new Error("NO SE PUDO OBTENER EL ENLACE DE DESCARGA.")
-  }
+  const fallbackJson = await fallbackRes.json()
+  const fallbackUrl = fallbackJson.data?.download?.url || fallbackJson.data?.dl || fallbackJson.result?.download
+
+  if (!fallbackUrl) throw new Error("NO SE PUDO OBTENER EL ENLACE DE DESCARGA.")
 
   return {
-    dl: downloadUrl,
-    title: json.result?.title || "audio"
+    dl: fallbackUrl,
+    title: fallbackJson.data?.title || "audio"
   }
 }
 
@@ -157,7 +164,7 @@ const handler = async (m, { conn, text }) => {
     const json = await downloadYoutube(result.url)
     const title = cleanFileName(json.title || result.title)
 
-    /* ENVIAR SOLO CANCIÓN CON VERIFICADO */
+    /* ENVIAR ÚNICAMENTE LA CANCIÓN */
 
     await conn.sendMessage(
       m.chat,
