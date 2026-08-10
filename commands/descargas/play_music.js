@@ -22,25 +22,17 @@ async function searchYoutube(input) {
   const ytRegex =
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
 
-  const videoMatch =
-    input.match(ytRegex)
-
-  const videoId =
-    videoMatch ? videoMatch[1] : null
-
-  /* LINK DIRECTO */
+  const videoMatch = input.match(ytRegex)
+  const videoId = videoMatch ? videoMatch[1] : null
 
   if (videoId) {
-
     try {
 
-      const info =
-        await yts({ videoId })
+      const info = await yts({ videoId })
 
       return {
         title:
-          info.title ||
-          "Video de YouTube",
+          info.title || "Video de YouTube",
 
         url:
           info.url ||
@@ -54,8 +46,7 @@ async function searchYoutube(input) {
           `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 
         duration:
-          info.timestamp ||
-          "Desconocida",
+          info.timestamp || "Desconocida",
 
         author:
           info.author?.name ||
@@ -66,8 +57,7 @@ async function searchYoutube(input) {
     } catch {
 
       return {
-        title:
-          "Video de YouTube",
+        title: "Video de YouTube",
 
         url:
           `https://youtu.be/${videoId}`,
@@ -77,35 +67,22 @@ async function searchYoutube(input) {
         thumbnail:
           `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 
-        duration:
-          "Desconocida",
+        duration: "Desconocida",
 
-        author:
-          "Desconocido"
+        author: "Desconocido"
       }
     }
   }
 
-  /* BÚSQUEDA POR NOMBRE */
+  const search = await yts(input)
+  const result = search.videos?.[0]
 
-  const search =
-    await yts(input)
-
-  const result =
-    search.videos?.[0]
-
-  if (!result)
-    return null
+  if (!result) return null
 
   return {
-    title:
-      result.title,
-
-    url:
-      result.url,
-
-    videoId:
-      result.videoId,
+    title: result.title,
+    url: result.url,
+    videoId: result.videoId,
 
     thumbnail:
       result.thumbnail ||
@@ -113,8 +90,7 @@ async function searchYoutube(input) {
       `https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg`,
 
     duration:
-      result.timestamp ||
-      "Desconocida",
+      result.timestamp || "Desconocida",
 
     author:
       result.author?.name ||
@@ -132,27 +108,57 @@ async function downloadYoutube(url) {
   const apiUrl =
     `https://getmod-mediahub.vercel.app/api/ytdl?url=${encodeURIComponent(url)}&format=mp3&apikey=${apiKey}`
 
-  const res =
-    await fetch(apiUrl)
+  const res = await fetch(apiUrl)
 
   if (!res.ok) {
-
     throw new Error(
       "LA API NO RESPONDIÓ CORRECTAMENTE."
     )
   }
 
-  const json =
-    await res.json()
+  const json = await res.json()
 
   if (!json.status || !json.dl) {
-
     throw new Error(
       "NO SE PUDO OBTENER EL ARCHIVO."
     )
   }
 
   return json
+}
+
+/* =========================================
+   CONTACTO ALAN STORE MX
+========================================= */
+
+function crearContacto(conn) {
+
+  const botNumber =
+    conn.user.jid.split("@")[0]
+
+  const vcard =
+`BEGIN:VCARD
+VERSION:3.0
+FN:𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄 𝐌𝐗
+ORG:Streaming Digital;
+TEL;type=CELL;type=VOICE;waid=${botNumber}:+${botNumber}
+END:VCARD`
+
+  return {
+    key: {
+      fromMe: false,
+      participant: "0@s.whatsapp.net",
+      remoteJid: "status@broadcast",
+      id: "AlanStoreFake"
+    },
+
+    message: {
+      contactMessage: {
+        displayName: "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
+        vcard
+      }
+    }
+  }
 }
 
 /* =========================================
@@ -169,8 +175,6 @@ const handler = async (
     const input =
       (text || "").trim()
 
-    /* SIN CANCIÓN */
-
     if (!input) {
 
       return conn.reply(
@@ -184,8 +188,6 @@ Ejemplo:
         m
       )
     }
-
-    /* BUSCAR */
 
     await m.react("🔎")
 
@@ -203,9 +205,19 @@ Ejemplo:
       )
     }
 
-    /* DESCARGAR */
-
     await m.react("⏳")
+
+    /*
+     * CREAR CONTACTO
+     * Este será el encabezado del audio
+     */
+
+    const fcontacto =
+      crearContacto(conn)
+
+    /*
+     * OBTENER AUDIO
+     */
 
     const json =
       await downloadYoutube(
@@ -218,9 +230,12 @@ Ejemplo:
         result.title
       )
 
-    /* =====================================
-       ENVIAR SOLAMENTE LA CANCIÓN
-    ===================================== */
+    /*
+     * ENVIAR SOLAMENTE LA CANCIÓN
+     *
+     * Pero citando el contacto de
+     * ALAN STORE MX como encabezado.
+     */
 
     await conn.sendMessage(
       m.chat,
@@ -235,11 +250,10 @@ Ejemplo:
         mimetype:
           "audio/mpeg",
 
-        ptt:
-          false
+        ptt: false
       },
       {
-        quoted: m
+        quoted: fcontacto
       }
     )
 
