@@ -1,5 +1,7 @@
+import fetch from "node-fetch"
 import yts from "yt-search"
-import ytdl from "@distube/ytdl-core"
+
+const apiKey = "barboza"
 
 /* =========================================
    LIMPIAR NOMBRE
@@ -20,11 +22,11 @@ async function searchYoutube(input) {
   const ytRegex =
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
 
-  const match =
+  const videoMatch =
     input.match(ytRegex)
 
   const videoId =
-    match ? match[1] : null
+    videoMatch ? videoMatch[1] : null
 
   /* LINK DIRECTO */
 
@@ -33,9 +35,7 @@ async function searchYoutube(input) {
     try {
 
       const info =
-        await yts({
-          videoId
-        })
+        await yts({ videoId })
 
       return {
         title:
@@ -50,6 +50,7 @@ async function searchYoutube(input) {
 
         thumbnail:
           info.thumbnail ||
+          info.image ||
           `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 
         duration:
@@ -85,7 +86,7 @@ async function searchYoutube(input) {
     }
   }
 
-  /* BUSCAR POR TEXTO */
+  /* BUSCAR POR NOMBRE */
 
   const search =
     await yts(input)
@@ -108,6 +109,7 @@ async function searchYoutube(input) {
 
     thumbnail:
       result.thumbnail ||
+      result.image ||
       `https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg`,
 
     duration:
@@ -122,82 +124,33 @@ async function searchYoutube(input) {
 }
 
 /* =========================================
-   DESCARGAR AUDIO DIRECTAMENTE
+   API ORIGINAL
 ========================================= */
 
-async function getAudioBuffer(url) {
+async function downloadYoutube(url) {
 
-  console.log("")
-  console.log("========== PLAY YTDL ==========")
-  console.log("URL:", url)
+  const apiUrl =
+    `https://getmod-mediahub.vercel.app/api/ytdl?url=${encodeURIComponent(url)}&format=mp3&apikey=${apiKey}`
 
-  /*
-   * Solo audio.
-   * highestaudio selecciona el mejor formato
-   * de audio disponible.
-   */
+  const res =
+    await fetch(apiUrl)
 
-  const stream =
-    ytdl(url, {
-      filter: "audioonly",
-      quality: "highestaudio"
-    })
+  if (!res.ok) {
+    throw new Error(
+      "LA API NO RESPONDIÓ CORRECTAMENTE."
+    )
+  }
 
-  const chunks = []
+  const json =
+    await res.json()
 
-  return new Promise(
-    (resolve, reject) => {
+  if (!json.status || !json.dl) {
+    throw new Error(
+      "NO SE PUDO OBTENER EL ARCHIVO."
+    )
+  }
 
-      stream.on(
-        "data",
-        chunk => {
-          chunks.push(chunk)
-        }
-      )
-
-      stream.on(
-        "end",
-        () => {
-
-          const buffer =
-            Buffer.concat(chunks)
-
-          console.log(
-            "AUDIO:",
-            buffer.length,
-            "bytes"
-          )
-
-          console.log(
-            "=============================="
-          )
-
-          if (!buffer.length) {
-            return reject(
-              new Error(
-                "EL AUDIO LLEGÓ VACÍO."
-              )
-            )
-          }
-
-          resolve(buffer)
-        }
-      )
-
-      stream.on(
-        "error",
-        error => {
-
-          console.error(
-            "YTDL ERROR:",
-            error
-          )
-
-          reject(error)
-        }
-      )
-    }
-  )
+  return json
 }
 
 /* =========================================
@@ -218,26 +171,18 @@ TEL;type=CELL;type=VOICE;waid=${botNumber}:+${botNumber}
 END:VCARD`
 
   return {
-
     key: {
-
-      fromMe:
-        false,
-
+      fromMe: false,
       participant:
         "0@s.whatsapp.net",
-
       remoteJid:
         "status@broadcast",
-
       id:
         "AlanStoreFake"
     },
 
     message: {
-
       contactMessage: {
-
         displayName:
           "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
 
@@ -248,16 +193,12 @@ END:VCARD`
 }
 
 /* =========================================
-   PLAY
+   PLAY AUTOMÁTICO
 ========================================= */
 
-const handler =
-async (
+const handler = async (
   m,
-  {
-    conn,
-    text
-  }
+  { conn, text }
 ) => {
 
   try {
@@ -276,63 +217,42 @@ async (
 
 Ejemplo:
 
-.play así como lo pedí`,
+.play pollito pío`,
 
         m
       )
     }
 
-    await m.react(
-      "🔎"
-    )
+    /* BUSCANDO */
 
-    /* =====================================
-       BUSCAR
-    ===================================== */
+    await m.react("🔎")
 
     const result =
-      await searchYoutube(
-        input
-      )
+      await searchYoutube(input)
 
     if (!result) {
 
-      await m.react(
-        "✖️"
-      )
+      await m.react("✖️")
 
       return conn.reply(
         m.chat,
-
         `> ✖ NO SE ENCONTRARON RESULTADOS.`,
-
         m
       )
     }
 
-    console.log(
-      "PLAY:",
-      result.title
-    )
+    /* CARGANDO */
 
-    await m.react(
-      "⏳"
-    )
+    await m.react("⏳")
 
-    /* =====================================
-       CONTACTO
-    ===================================== */
+    /* CREAR CONTACTO */
 
     const fcontacto =
-      crearContacto(
-        conn
-      )
+      crearContacto(conn)
 
-    /* =====================================
-       ENCABEZADO
-    ===================================== */
+    /* ENCABEZADO */
 
-    const infoText =
+    const caption =
 `╭─「 🎵 𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄 𝐏𝐋𝐀𝐘 」
 │
 │ 🎶 *${result.title}*
@@ -341,97 +261,82 @@ Ejemplo:
 │
 ╰───────────────
 
-🎧 *Descargando canción...*`
+🎧 *Descargando canción automáticamente...*`
+
+    /* ENVIAR ENCABEZADO */
 
     await conn.sendMessage(
       m.chat,
-
       {
-        text:
-          infoText
+        text: caption
       },
-
       {
-        quoted:
-          fcontacto
+        quoted: fcontacto
       }
     )
 
     /* =====================================
-       OBTENER AUDIO
+       OBTENER MP3
     ===================================== */
 
-    const audioBuffer =
-      await getAudioBuffer(
+    const json =
+      await downloadYoutube(
         result.url
       )
 
-    /* =====================================
-       NOMBRE
-    ===================================== */
-
     const title =
       cleanFileName(
+        json.title ||
         result.title
       )
 
     /* =====================================
-       ENVIAR AUDIO
+       ENVIAR AUDIO DIRECTAMENTE
     ===================================== */
 
     await conn.sendMessage(
       m.chat,
-
       {
-        audio:
-          audioBuffer,
+        audio: {
+          url: json.dl
+        },
 
         fileName:
-          `${title}.webm`,
+          `${title}.mp3`,
 
         mimetype:
-          "audio/webm",
+          "audio/mpeg",
 
         ptt:
           false
       },
-
       {
         quoted:
           fcontacto
       }
     )
 
-    await m.react(
-      "✔️"
-    )
+    /* TERMINADO */
+
+    await m.react("✔️")
 
     console.log(
-      "✅ PLAY ENVIADO:",
-      title
+      `✅ PLAY ENVIADO: ${title}`
     )
 
   } catch (e) {
 
     console.error(
-      ""
-    )
-
-    console.error(
       "========== ERROR PLAY =========="
     )
 
-    console.error(
-      e
-    )
+    console.error(e)
 
     console.error(
       "================================"
     )
 
-    await m.react(
-      "✖️"
-    )
+    await m.react("✖️")
 
     return conn.reply(
       m.chat,
