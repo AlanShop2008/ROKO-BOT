@@ -1,11 +1,9 @@
-import fetch from "node-fetch"
 import yts from "yt-search"
+import ytdl from "@distube/ytdl-core"
 
-const apiKey = "barboza"
-
-/* ================================
-   LIMPIAR NOMBRE DEL ARCHIVO
-================================ */
+/* =========================================
+   LIMPIAR NOMBRE
+========================================= */
 
 function cleanFileName(name) {
   return (name || "YouTube")
@@ -13,22 +11,20 @@ function cleanFileName(name) {
     .slice(0, 80)
 }
 
-/* ================================
-   BUSCAR EN YOUTUBE
-================================ */
+/* =========================================
+   BUSCAR YOUTUBE
+========================================= */
 
 async function searchYoutube(input) {
 
   const ytRegex =
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
 
-  const videoMatch =
+  const match =
     input.match(ytRegex)
 
   const videoId =
-    videoMatch
-      ? videoMatch[1]
-      : null
+    match ? match[1] : null
 
   /* LINK DIRECTO */
 
@@ -37,7 +33,9 @@ async function searchYoutube(input) {
     try {
 
       const info =
-        await yts({ videoId })
+        await yts({
+          videoId
+        })
 
       return {
         title:
@@ -52,7 +50,6 @@ async function searchYoutube(input) {
 
         thumbnail:
           info.thumbnail ||
-          info.image ||
           `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 
         duration:
@@ -88,7 +85,7 @@ async function searchYoutube(input) {
     }
   }
 
-  /* BÚSQUEDA */
+  /* BUSCAR POR TEXTO */
 
   const search =
     await yts(input)
@@ -111,7 +108,6 @@ async function searchYoutube(input) {
 
     thumbnail:
       result.thumbnail ||
-      result.image ||
       `https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg`,
 
     duration:
@@ -125,187 +121,88 @@ async function searchYoutube(input) {
   }
 }
 
-/* ================================
-   API DE DESCARGA
-================================ */
-
-async function downloadYoutube(url) {
-
-  const apiUrl =
-    `https://getmod-mediahub.vercel.app/api/ytdl?url=${encodeURIComponent(url)}&format=mp3&apikey=${apiKey}`
-
-  console.log("")
-  console.log("========== PLAY REQUEST ==========")
-  console.log("URL YouTube:", url)
-  console.log("API:", apiUrl)
-  console.log("==================================")
-
-  const res =
-    await fetch(apiUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
-        "Accept":
-          "application/json,text/plain,*/*"
-      }
-    })
-
-  const responseText =
-    await res.text()
-
-  console.log("")
-  console.log("========== PLAY API RESPONSE ==========")
-  console.log("HTTP:", res.status)
-  console.log("Respuesta:")
-  console.log(responseText)
-  console.log("========================================")
-  console.log("")
-
-  if (!res.ok) {
-    throw new Error(
-      `LA API RESPONDIÓ CON HTTP ${res.status}`
-    )
-  }
-
-  let json
-
-  try {
-
-    json =
-      JSON.parse(responseText)
-
-  } catch {
-
-    throw new Error(
-      "LA API NO DEVOLVIÓ JSON VÁLIDO."
-    )
-  }
-
-  console.log(
-    "========== PLAY JSON =========="
-  )
-
-  console.log(
-    JSON.stringify(
-      json,
-      null,
-      2
-    )
-  )
-
-  console.log(
-    "==============================="
-  )
-
-  if (!json.status) {
-
-    throw new Error(
-      json.message ||
-      "LA API INDICÓ QUE LA DESCARGA FALLÓ."
-    )
-  }
-
-  if (!json.dl) {
-
-    throw new Error(
-      "LA API NO DEVOLVIÓ EL CAMPO 'dl'."
-    )
-  }
-
-  return json
-}
-
-/* ================================
-   DESCARGAR AUDIO
-================================ */
+/* =========================================
+   DESCARGAR AUDIO DIRECTAMENTE
+========================================= */
 
 async function getAudioBuffer(url) {
 
   console.log("")
-  console.log(
-    "========== DESCARGANDO AUDIO =========="
-  )
+  console.log("========== PLAY YTDL ==========")
+  console.log("URL:", url)
 
-  console.log(
-    "URL:",
-    url
-  )
+  /*
+   * Solo audio.
+   * highestaudio selecciona el mejor formato
+   * de audio disponible.
+   */
 
-  const response =
-    await fetch(url, {
-      redirect: "follow",
-
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
-
-        "Accept":
-          "audio/mpeg,audio/*,*/*",
-
-        "Referer":
-          "https://www.youtube.com/"
-      }
+  const stream =
+    ytdl(url, {
+      filter: "audioonly",
+      quality: "highestaudio"
     })
 
-  console.log(
-    "HTTP AUDIO:",
-    response.status
-  )
+  const chunks = []
 
-  console.log(
-    "URL FINAL:",
-    response.url
-  )
+  return new Promise(
+    (resolve, reject) => {
 
-  console.log(
-    "CONTENT-TYPE:",
-    response.headers.get(
-      "content-type"
-    )
-  )
+      stream.on(
+        "data",
+        chunk => {
+          chunks.push(chunk)
+        }
+      )
 
-  console.log(
-    "========================================"
-  )
+      stream.on(
+        "end",
+        () => {
 
-  if (!response.ok) {
+          const buffer =
+            Buffer.concat(chunks)
 
-    if (response.status === 403) {
+          console.log(
+            "AUDIO:",
+            buffer.length,
+            "bytes"
+          )
 
-      throw new Error(
-        "EL SERVIDOR DEL AUDIO RECHAZÓ LA DESCARGA (HTTP 403). LA URL GENERADA POR LA API NO PERMITE DESCARGA DIRECTA DESDE EL SERVIDOR."
+          console.log(
+            "=============================="
+          )
+
+          if (!buffer.length) {
+            return reject(
+              new Error(
+                "EL AUDIO LLEGÓ VACÍO."
+              )
+            )
+          }
+
+          resolve(buffer)
+        }
+      )
+
+      stream.on(
+        "error",
+        error => {
+
+          console.error(
+            "YTDL ERROR:",
+            error
+          )
+
+          reject(error)
+        }
       )
     }
-
-    throw new Error(
-      `NO SE PUDO DESCARGAR EL AUDIO. HTTP ${response.status}`
-    )
-  }
-
-  const buffer =
-    Buffer.from(
-      await response.arrayBuffer()
-    )
-
-  if (!buffer.length) {
-
-    throw new Error(
-      "EL AUDIO DESCARGADO ESTÁ VACÍO."
-    )
-  }
-
-  console.log(
-    "AUDIO DESCARGADO:",
-    buffer.length,
-    "bytes"
   )
-
-  return buffer
 }
 
-/* ================================
-   CONTACTO ALAN STORE
-================================ */
+/* =========================================
+   CONTACTO ALAN STORE MX
+========================================= */
 
 function crearContacto(conn) {
 
@@ -344,16 +241,15 @@ END:VCARD`
         displayName:
           "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
 
-        vcard:
-          vcard
+        vcard
       }
     }
   }
 }
 
-/* ================================
+/* =========================================
    PLAY
-================================ */
+========================================= */
 
 const handler =
 async (
@@ -368,6 +264,8 @@ async (
 
     const input =
       (text || "").trim()
+
+    /* SIN TEXTO */
 
     if (!input) {
 
@@ -388,7 +286,9 @@ Ejemplo:
       "🔎"
     )
 
-    /* BUSCAR */
+    /* =====================================
+       BUSCAR
+    ===================================== */
 
     const result =
       await searchYoutube(
@@ -410,31 +310,27 @@ Ejemplo:
       )
     }
 
+    console.log(
+      "PLAY:",
+      result.title
+    )
+
     await m.react(
       "⏳"
     )
 
-    /* OBTENER INFORMACIÓN DE LA API */
-
-    const json =
-      await downloadYoutube(
-        result.url
-      )
-
-    const title =
-      cleanFileName(
-        json.title ||
-        result.title
-      )
-
-    /* CONTACTO */
+    /* =====================================
+       CONTACTO
+    ===================================== */
 
     const fcontacto =
       crearContacto(
         conn
       )
 
-    /* ENCABEZADO */
+    /* =====================================
+       ENCABEZADO
+    ===================================== */
 
     const infoText =
 `╭─「 🎵 𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄 𝐏𝐋𝐀𝐘 」
@@ -461,18 +357,27 @@ Ejemplo:
       }
     )
 
-    /* ================================
-       DESCARGAR MP3
-    ================================= */
+    /* =====================================
+       OBTENER AUDIO
+    ===================================== */
 
     const audioBuffer =
       await getAudioBuffer(
-        json.dl
+        result.url
       )
 
-    /* ================================
-       ENVIAR MP3
-    ================================= */
+    /* =====================================
+       NOMBRE
+    ===================================== */
+
+    const title =
+      cleanFileName(
+        result.title
+      )
+
+    /* =====================================
+       ENVIAR AUDIO
+    ===================================== */
 
     await conn.sendMessage(
       m.chat,
@@ -482,10 +387,10 @@ Ejemplo:
           audioBuffer,
 
         fileName:
-          `${title}.mp3`,
+          `${title}.webm`,
 
         mimetype:
-          "audio/mpeg",
+          "audio/webm",
 
         ptt:
           false
@@ -502,7 +407,8 @@ Ejemplo:
     )
 
     console.log(
-      `✅ PLAY ENVIADO: ${title}`
+      "✅ PLAY ENVIADO:",
+      title
     )
 
   } catch (e) {
@@ -539,16 +445,16 @@ ${e.message || e}`,
   }
 }
 
-/* ================================
-   CONFIGURACIÓN DEL COMANDO
-================================ */
+/* =========================================
+   CONFIGURACIÓN
+========================================= */
 
 handler.command = [
   "play"
 ]
 
 handler.help = [
-  "play <texto/link>"
+  "play <canción o link>"
 ]
 
 handler.tags = [
