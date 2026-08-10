@@ -1,5 +1,7 @@
-import fetch from "node-fetch"
+Import fetch from "node-fetch"
 import yts from "yt-search"
+
+const apiKey = "barboza"
 
 /* =========================================
    LIMPIAR NOMBRE
@@ -16,94 +18,149 @@ function cleanFileName(name) {
 ========================================= */
 
 async function searchYoutube(input) {
+
   const ytRegex =
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
 
-  const videoMatch = input.match(ytRegex)
-  const videoId = videoMatch ? videoMatch[1] : null
+  const videoMatch =
+    input.match(ytRegex)
+
+  const videoId =
+    videoMatch ? videoMatch[1] : null
+
+  /* LINK DIRECTO */
 
   if (videoId) {
+
     try {
-      const info = await yts({ videoId })
+
+      const info =
+        await yts({ videoId })
+
       return {
-        title: info.title || "Video de YouTube",
-        url: info.url || `https://youtu.be/${videoId}`,
+        title:
+          info.title ||
+          "Video de YouTube",
+
+        url:
+          info.url ||
+          `https://youtu.be/${videoId}`,
+
         videoId,
+
         thumbnail:
           info.thumbnail ||
           info.image ||
           `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-        duration: info.timestamp || "Desconocida",
-        author: info.author?.name || info.author || "Desconocido"
+
+        duration:
+          info.timestamp ||
+          "Desconocida",
+
+        author:
+          info.author?.name ||
+          info.author ||
+          "Desconocido"
       }
+
     } catch {
+
       return {
-        title: "Video de YouTube",
-        url: `https://youtu.be/${videoId}`,
+        title:
+          "Video de YouTube",
+
+        url:
+          `https://youtu.be/${videoId}`,
+
         videoId,
-        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-        duration: "Desconocida",
-        author: "Desconocido"
+
+        thumbnail:
+          `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+
+        duration:
+          "Desconocida",
+
+        author:
+          "Desconocido"
       }
     }
   }
 
-  const search = await yts(input)
-  const result = search.videos?.[0]
+  /* BUSCAR POR NOMBRE */
 
-  if (!result) return null
+  const search =
+    await yts(input)
+
+  const result =
+    search.videos?.[0]
+
+  if (!result)
+    return null
 
   return {
-    title: result.title,
-    url: result.url,
-    videoId: result.videoId,
+    title:
+      result.title,
+
+    url:
+      result.url,
+
+    videoId:
+      result.videoId,
+
     thumbnail:
       result.thumbnail ||
       result.image ||
       `https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg`,
-    duration: result.timestamp || "Desconocida",
-    author: result.author?.name || result.author || "Desconocido"
+
+    duration:
+      result.timestamp ||
+      "Desconocida",
+
+    author:
+      result.author?.name ||
+      result.author ||
+      "Desconocido"
   }
 }
 
 /* =========================================
-   API DE DESCARGA (COBALT / RYZENDESU)
+   API ORIGINAL
 ========================================= */
 
 async function downloadYoutube(url) {
-  // Intentar con API 1 (Ryzendesu)
-  try {
-    const res = await fetch(`https://api.ryzendesu.vip/api/downloader/ytmp3?url=${encodeURIComponent(url)}`)
-    if (res.ok) {
-      const json = await res.json()
-      const downloadUrl = json.url || json.dl || json.result?.downloadUrl
-      if (downloadUrl) return { dl: downloadUrl, title: json.title || json.result?.title }
-    }
-  } catch (e) {
-    console.error("Falló servidor 1, intentando servidor secundario...")
+
+  const apiUrl =
+    `https://getmod-mediahub.vercel.app/api/ytdl?url=${encodeURIComponent(url)}&format=mp3&apikey=${apiKey}`
+
+  const res =
+    await fetch(apiUrl)
+
+  if (!res.ok) {
+    throw new Error(
+      "LA API NO RESPONDIÓ CORRECTAMENTE."
+    )
   }
 
-  // Intentar con API 2 (Fallback: Delirius)
-  const fallbackRes = await fetch(`https://deliriussapi-official.vercel.app/download/ytmp3?url=${encodeURIComponent(url)}`)
-  if (!fallbackRes.ok) throw new Error("NINGÚN SERVIDOR DE DESCARGA RESPONDIÓ.")
+  const json =
+    await res.json()
 
-  const fallbackJson = await fallbackRes.json()
-  const fallbackUrl = fallbackJson.data?.download?.url || fallbackJson.data?.dl || fallbackJson.result?.download
-
-  if (!fallbackUrl) throw new Error("NO SE PUDO OBTENER EL ENLACE DE DESCARGA.")
-
-  return {
-    dl: fallbackUrl,
-    title: fallbackJson.data?.title || "audio"
+  if (!json.status || !json.dl) {
+    throw new Error(
+      "NO SE PUDO OBTENER EL ARCHIVO."
+    )
   }
+
+  return json
 }
 
 /* =========================================
-   CONTACTO ALAN STORE MX (VERIFICADO)
+   CONTACTO ALAN STORE MX
 ========================================= */
 
 function crearContacto(conn) {
-  const botNumber = conn.user.jid.split("@")[0]
+
+  const botNumber =
+    conn.user.jid.split("@")[0]
 
   const vcard =
 `BEGIN:VCARD
@@ -116,13 +173,19 @@ END:VCARD`
   return {
     key: {
       fromMe: false,
-      participant: "0@s.whatsapp.net",
-      remoteJid: "status@broadcast",
-      id: "AlanStoreFake"
+      participant:
+        "0@s.whatsapp.net",
+      remoteJid:
+        "status@broadcast",
+      id:
+        "AlanStoreFake"
     },
+
     message: {
       contactMessage: {
-        displayName: "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
+        displayName:
+          "𝐀𝐋𝐀𝐍 𝐒𝐓𝐎𝐑𝐄",
+
         vcard
       }
     }
@@ -130,27 +193,47 @@ END:VCARD`
 }
 
 /* =========================================
-   PLAY AUTOMÁTICO (SOLO CANCIÓN)
+   PLAY AUTOMÁTICO
 ========================================= */
 
-const handler = async (m, { conn, text }) => {
+const handler = async (
+  m,
+  { conn, text }
+) => {
+
   try {
-    const input = (text || "").trim()
+
+    const input =
+      (text || "").trim()
+
+    /* SIN TEXTO */
 
     if (!input) {
+
       return conn.reply(
         m.chat,
-        `> ✦ INGRESA EL NOMBRE O LINK DE *YOUTUBE* ✦\n\nEjemplo:\n.play pollito pío`,
+
+        `> ✦ INGRESA EL NOMBRE O LINK DE *YOUTUBE* ✦
+
+Ejemplo:
+
+.play pollito pío`,
+
         m
       )
     }
 
+    /* BUSCANDO */
+
     await m.react("🔎")
 
-    const result = await searchYoutube(input)
+    const result =
+      await searchYoutube(input)
 
     if (!result) {
+
       await m.react("✖️")
+
       return conn.reply(
         m.chat,
         `> ✖ NO SE ENCONTRARON RESULTADOS.`,
@@ -158,39 +241,102 @@ const handler = async (m, { conn, text }) => {
       )
     }
 
+    /* CARGANDO */
+
     await m.react("⏳")
 
-    const fcontacto = crearContacto(conn)
-    const json = await downloadYoutube(result.url)
-    const title = cleanFileName(json.title || result.title)
+    /* CREAR CONTACTO */
 
-    /* ENVIAR ÚNICAMENTE LA CANCIÓN */
+    const fcontacto =
+      crearContacto(conn)
+
+    /* ENCABEZADO */
+
+    const caption =
+` `
+
+    /* ENVIAR ENCABEZADO */
 
     await conn.sendMessage(
       m.chat,
       {
-        audio: { url: json.dl },
-        fileName: `${title}.mp3`,
-        mimetype: "audio/mpeg",
-        ptt: false
+        text: caption
       },
       {
         quoted: fcontacto
       }
     )
 
+    /* =====================================
+       OBTENER MP3
+    ===================================== */
+
+    const json =
+      await downloadYoutube(
+        result.url
+      )
+
+    const title =
+      cleanFileName(
+        json.title ||
+        result.title
+      )
+
+    /* =====================================
+       ENVIAR AUDIO DIRECTAMENTE
+    ===================================== */
+
+    await conn.sendMessage(
+      m.chat,
+      {
+        audio: {
+          url: json.dl
+        },
+
+        fileName:
+          `${title}.mp3`,
+
+        mimetype:
+          "audio/mpeg",
+
+        ptt:
+          false
+      },
+      {
+        quoted:
+          fcontacto
+      }
+    )
+
+    /* TERMINADO */
+
     await m.react("✔️")
-    console.log(`✅ PLAY ENVIADO: ${title}`)
+
+    console.log(
+      `✅ PLAY ENVIADO: ${title}`
+    )
 
   } catch (e) {
-    console.error("========== ERROR PLAY ==========")
+
+    console.error(
+      "========== ERROR PLAY =========="
+    )
+
     console.error(e)
-    console.error("================================")
+
+    console.error(
+      "================================"
+    )
 
     await m.react("✖️")
+
     return conn.reply(
       m.chat,
-      `> ⚠️ *ERROR AL DESCARGAR LA CANCIÓN*\n\n${e.message || e}`,
+
+      `> ⚠️ *ERROR AL DESCARGAR LA CANCIÓN*
+
+${e.message || e}`,
+
       m
     )
   }
@@ -200,8 +346,16 @@ const handler = async (m, { conn, text }) => {
    CONFIGURACIÓN
 ========================================= */
 
-handler.command = ["play"]
-handler.help = ["play <canción o link>"]
-handler.tags = ["media"]
+handler.command = [
+  "play"
+]
+
+handler.help = [
+  "play <canción o link>"
+]
+
+handler.tags = [
+  "media"
+]
 
 export default handler
